@@ -37,8 +37,8 @@ type Data struct {
 }
 
 func (that Data) String() string {
-    return fmt.Sprintf("{%d, %d, %d}",
-        that.subs, that.views, that.videos)
+    return fmt.Sprintf("{%s, %d, %d, %d}",
+        that.serial, that.subs, that.views, that.videos)
 }
 
 func connection() *sql.DB {
