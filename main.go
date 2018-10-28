@@ -51,7 +51,7 @@ func connection() *sql.DB {
 }
 
 func channels() []string {
-    sqlStr := "select serial from youtube.entities.channels ORDER BY RANDOM() LIMIT 50"
+    sqlStr := "SELECT DISTINCT SERIAL FROM youtube.entities.channels ORDER BY RANDOM() LIMIT 50"
     db := connection()
     defer func() {
         err := db.Close()
