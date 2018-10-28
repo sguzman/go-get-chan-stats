@@ -8,6 +8,7 @@ import (
     "math/rand"
     "os"
     "runtime"
+    "strconv"
     "strings"
     "time"
 )
@@ -29,24 +30,15 @@ func connStr() string {
 }
 
 type Data struct {
-    title     string
-    serial    string
-    customUrl *string
-    country   *string
-    joined    string
-}
-
-func nilToEmpty(str *string) string {
-    if str == nil {
-        return "nil"
-    }
-
-    return *str
+    serial string
+    subs   uint64
+    videos uint64
+    views  uint64
 }
 
 func (that Data) String() string {
-    return fmt.Sprintf("{%s, %s, %s, %s, %s}",
-        that.title, that.serial, nilToEmpty(that.customUrl), nilToEmpty(that.country), that.joined)
+    return fmt.Sprintf("{%d, %d, %d}",
+        that.subs, that.views, that.videos)
 }
 
 func connection() *sql.DB {
@@ -59,7 +51,7 @@ func connection() *sql.DB {
 }
 
 func channels() []string {
-    sqlStr := "select C.serial from youtube.entities.channels C WHERE C.serial NOT IN (select C.serial from youtube.entities.chans C) LIMIT 50"
+    sqlStr := "select serial from youtube.entities.channels ORDER BY RANDOM() LIMIT 50"
     db := connection()
     defer func() {
         err := db.Close()
@@ -100,7 +92,7 @@ func getKey() string {
 func getJson(cs []string) interface{} {
     key := getKey()
     url := "https://www.googleapis.com/youtube/v3/channels"
-    partStr := "snippet,topicDetails"
+    partStr := "statistics"
     idStr := strings.Join(cs, ",")
 
     param := req.Param{
@@ -134,22 +126,24 @@ func getData(cs []string) []Data {
         {
             data.serial = item["id"].(string)
             {
-                snippet := item["snippet"].(map[string]interface{})
-                data.title = snippet["title"].(string)
-                if snippet["customUrl"] == nil {
-                    data.customUrl = nil
-                } else {
-                    str := snippet["customUrl"].(string)
-                    data.customUrl = &str
+                stats := item["statistics"].(map[string]interface{})
+                subs, err := strconv.ParseUint(stats["subscriberCount"].(string), 10, 64)
+                if err != nil {
+                    panic(err)
                 }
+                data.subs = subs
 
-                data.joined = snippet["publishedAt"].(string)
-                if snippet["country"] == nil {
-                    data.country = nil
-                } else {
-                    str := snippet["country"].(string)
-                    data.country = &str
+                vids, err := strconv.ParseUint(stats["videoCount"].(string), 10, 64)
+                if err != nil {
+                    panic(err)
                 }
+                data.videos = vids
+
+                views, err := strconv.ParseUint(stats["viewCount"].(string), 10, 64)
+                if err != nil {
+                    panic(err)
+                }
+                data.views = views
             }
         }
 
@@ -169,12 +163,12 @@ func insert(ds []Data) {
         }
     }()
 
-    sqlInsert := "INSERT INTO youtube.entities.chans (serial, title, custom_url, country, joined) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING"
+    sqlInsert := "INSERT INTO youtube.entities.chan_stats (serial, subs, videos, views) VALUES ($1, $2, $3, $4)"
 
     for i := range ds {
         d := ds[i]
 
-        _, err := db.Exec(sqlInsert, d.serial, d.title, d.customUrl, d.country, d.joined)
+        _, err := db.Exec(sqlInsert, d.serial, d.subs, d.videos, d.views)
         if err != nil {
             panic(err)
         }
