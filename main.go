@@ -51,7 +51,7 @@ func connection() *sql.DB {
 }
 
 func channels() []string {
-    sqlStr := "SELECT serial FROM youtube.entities.channels ORDER BY RANDOM() LIMIT 50"
+    sqlStr := "SELECT serial FROM (SELECT SERIAL FROM youtube.entities.channels EXCEPT SELECT DISTINCT SERIAL FROM youtube.entities.chan_stats) CC LIMIT 50"
     db := connection()
     defer func() {
         err := db.Close()
@@ -65,7 +65,7 @@ func channels() []string {
         panic(err)
     }
 
-    serials := make([]string, 50)
+    serials := make([]string, 0)
     var idx uint8
     for row.Next() {
         var serial string
@@ -75,7 +75,7 @@ func channels() []string {
             panic(err)
         }
 
-        serials[idx] = serial
+        serials = append(serials, serial)
         idx++
     }
 
@@ -179,6 +179,12 @@ func main() {
     rand.Seed(time.Now().Unix())
     for {
         chans := channels()
+        if len(chans) == 0 {
+            fmt.Println("No new entries found - Sleeping for a bit...")
+            time.Sleep(10 * time.Second)
+            continue
+        }
+
         datas := getData(chans)
         insert(datas)
 
