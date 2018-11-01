@@ -1,3 +1,4 @@
+# docker.io/guzmansalv/youtube_stats
 FROM golang as base
 
 RUN mkdir /app
