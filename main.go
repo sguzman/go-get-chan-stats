@@ -163,14 +163,42 @@ func insert(ds []Data) {
         }
     }()
 
-    sqlInsert := "INSERT INTO youtube.entities.chan_stats (serial, subs, videos, views) VALUES ($1, $2, $3, $4)"
+    {
+        sqlInsert := "INSERT INTO youtube.entities.chans_subs (serial, subs) VALUES ($1, $2)"
 
-    for i := range ds {
-        d := ds[i]
+        for i := range ds {
+            d := ds[i]
 
-        _, err := db.Exec(sqlInsert, d.serial, d.subs, d.videos, d.views)
-        if err != nil {
-            panic(err)
+            _, err := db.Exec(sqlInsert, d.serial, d.subs)
+            if err != nil {
+                panic(err)
+            }
+        }
+    }
+
+    {
+        sqlInsert := "INSERT INTO youtube.entities.chan_videos (serial, videos) VALUES ($1, $2)"
+
+        for i := range ds {
+            d := ds[i]
+
+            _, err := db.Exec(sqlInsert, d.serial, d.videos)
+            if err != nil {
+                panic(err)
+            }
+        }
+    }
+
+    {
+        sqlInsert := "INSERT INTO youtube.entities.chan_views (serial, views) VALUES ($1, $2)"
+
+        for i := range ds {
+            d := ds[i]
+
+            _, err := db.Exec(sqlInsert, d.serial, d.views)
+            if err != nil {
+                panic(err)
+            }
         }
     }
 }
